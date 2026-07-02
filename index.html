@@ -48,8 +48,8 @@
     <div>
       <button onclick="setTool('pen')">✏️ Карандаш</button>
       <button onclick="setTool('eraser')">🧼 Ластик</button>
-      <button onclick="undo()">↩ Отменить последнее</button>
-      <button onclick="clearCanvas()">🗑 Очистить всё</button>
+      <button onclick="undo()">↩ Отменить (Ctrl+Z)</button>
+      <button onclick="clearCanvas()">🗑 Очистить</button>
       <button onclick="addText()">✍ Текст</button>
       <button onclick="saveImage()">💾 Скачать</button>
     </div>
@@ -59,19 +59,32 @@
 
   <script>
     let canvas, ctx, historys = [];
-    const container = document.getElementById('container');
     let currentTool = 'pen';
     let currentPlayer = null;
+    const container = document.getElementById('container');
 
     function createCanvas(w, h) {
       container.innerHTML = `<canvas id="canvas" width="${w}" height="${h}"></canvas>`;
       canvas = document.getElementById('canvas');
-      ctx = canvas.getContext('2d');
+      ctx = canvas.getContext('2d', { willReadFrequently: true });
       setupDrawing();
     }
 
     function setupDrawing() {
       let drawing = false, lastX, lastY;
+
+      const draw = (e) => {
+        if (!drawing) return;
+        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
+        ctx.lineWidth = currentTool === 'eraser' ? 35 : +document.getElementById('size').value;
+        ctx.lineCap = ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+        lastX = e.offsetX;
+        lastY = e.offsetY;
+      };
 
       canvas.addEventListener('mousedown', e => {
         if (currentPlayer) {
@@ -80,27 +93,15 @@
           return;
         }
         drawing = true;
-        lastX = e.offsetX; lastY = e.offsetY;
+        lastX = e.offsetX;
+        lastY = e.offsetY;
         saveHistory();
       });
 
-      canvas.addEventListener('mousemove', e => {
-        if (!drawing) return;
-        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
-        ctx.lineWidth = currentTool === 'eraser' ? 35 : document.getElementById('size').value;
-        ctx.lineCap = ctx.lineJoin = "round";
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
-        lastX = e.offsetX; lastY = e.offsetY;
-      });
-
+      canvas.addEventListener('mousemove', draw);
       canvas.addEventListener('mouseup', () => drawing = false);
       canvas.addEventListener('mouseout', () => drawing = false);
     }
-
-    function setTool(tool) { currentTool = tool; }
 
     function drawPlayer(x, y, label) {
       const isCT = label.startsWith('CT');
@@ -108,25 +109,24 @@
       ctx.beginPath();
       ctx.arc(x, y, 18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#ffffff";
+      ctx.strokeStyle = "white";
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = "white";
       ctx.font = "bold 18px Arial";
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label.replace('CT','').replace('T',''), x, y);
+      ctx.fillText(label.replace('CT','').replace('T',''), x, y + 1);
       saveHistory();
     }
 
     function placePlayer(label) {
       currentPlayer = label;
-      alert(`Кликни на карту чтобы поставить ${label}`);
+      alert(`Кликни на карту, чтобы поставить ${label}`);
     }
 
     function saveHistory() {
       if (ctx) historys.push(canvas.toDataURL());
-      if (historys.length > 50) historys.shift();
+      if (historys.length > 60) historys.shift();
     }
 
     function loadMap() {
@@ -135,10 +135,10 @@
       img.onload = () => {
         createCanvas(img.width, img.height);
         ctx.drawImage(img, 0, 0);
-        historys = []; // сброс истории при смене карты
+        historys = [];
         saveHistory();
       };
-      img.onerror = () => alert("Не удалось загрузить карту");
+      img.onerror = () => alert("Ошибка загрузки карты");
       img.src = url;
     }
 
@@ -154,19 +154,19 @@
         alert("Нечего отменять");
         return;
       }
-      historys.pop(); // удаляем текущее состояние
-      const previous = historys[historys.length - 1];
+      historys.pop(); // удаляем текущее
+      const prev = historys[historys.length-1];
       const img = new Image();
-      img.src = previous;
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
       };
+      img.src = prev;
     }
 
     function addText() {
       if (!ctx) return;
-      const text = prompt("Текст стратегии:");
+      const text = prompt("Текст:");
       if (!text) return;
       ctx.font = "bold 34px Arial";
       ctx.fillStyle = "#ffffff";
@@ -182,6 +182,10 @@
       link.download = 'cs2-strat.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
+    }
+
+    function setTool(tool) {
+      currentTool = tool;
     }
 
     window.onload = loadMap;
