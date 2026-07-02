@@ -6,10 +6,12 @@
   <style>
     body { margin:0; background:#0a0a0a; color:white; font-family:Arial; text-align:center; }
     .tools { padding:15px; background:#1a1a1a; position: sticky; top:0; z-index:10; }
-    select, button, input { margin:5px; padding:8px 12px; font-size:16px; }
-    .player-btn { width:50px; height:50px; font-size:18px; margin:3px; border-radius:50%; }
-    #container { position:relative; display:inline-block; background:#111; padding:10px; border:3px solid #333; }
+    select, button, input { margin:5px; padding:8px 12px; font-size:16px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #3a3a3a; }
+    .player-btn { width:50px; height:50px; font-size:18px; margin:3px; border-radius:50%; border: none; }
+    #container { position:relative; display:inline-block; background:#111; padding:10px; border:3px solid #333; margin-top: 20px; }
     canvas { image-rendering: crisp-edges; max-width:100%; height:auto; cursor: crosshair; }
+    .active-tool { border: 2px solid #00aaff !important; background: #3a3a3a; }
   </style>
 </head>
 <body>
@@ -46,8 +48,15 @@
     </div>
 
     <div>
-      <button onclick="setTool('pen')">✏️ Карандаш</button>
-      <button onclick="setTool('eraser')">🧼 Ластик</button>
+      <button id="btn-pen" class="active-tool" onclick="setTool('pen')">✏️ Карандаш</button>
+      <button id="btn-eraser" onclick="setTool('eraser')">🧼 Ластик</button>
+      
+      <label style="margin-left:10px;">Цвет:</label>
+      <input type="color" id="color" value="#ff0000" style="padding:0; width:40px; height:35px; vertical-align:middle;">
+      
+      <label style="margin-left:10px;">Размер:</label>
+      <input type="number" id="size" value="5" min="1" max="50" style="width:50px; vertical-align:middle;">
+
       <button onclick="undo()">↩ Отменить</button>
       <button onclick="clearCanvas()">🗑 Очистить</button>
       <button onclick="addText()">✍ Текст</button>
@@ -58,9 +67,11 @@
   <div id="container"></div>
 
   <script>
-    let canvas, ctx, historys = [];
+    let canvas, ctx;
+    let historys = [];
     let currentTool = 'pen';
     let currentPlayer = null;
+    let mapImage = new Image(); // Храним изображение карты отдельно
     const container = document.getElementById('container');
 
     function createCanvas(w, h) {
@@ -75,6 +86,7 @@
 
       canvas.addEventListener('mousedown', e => {
         if (currentPlayer) {
+          saveHistory();
           drawPlayer(e.offsetX, e.offsetY, currentPlayer);
           currentPlayer = null;
           return;
@@ -87,24 +99,45 @@
 
       canvas.addEventListener('mousemove', e => {
         if (!drawing) return;
-        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
-        ctx.lineWidth = currentTool === 'eraser' ? 35 : +document.getElementById('size').value;
-        ctx.lineCap = ctx.lineJoin = "round";
+
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(e.offsetX, e.offsetY);
+
+        if (currentTool === 'eraser') {
+          // Настоящее стирание до карты
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.lineWidth = 35;
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = document.getElementById('color').value;
+          ctx.lineWidth = +document.getElementById('size').value;
+        }
+
+        ctx.lineCap = ctx.lineJoin = "round";
         ctx.stroke();
+        
         lastX = e.offsetX;
         lastY = e.offsetY;
       });
 
-      canvas.addEventListener('mouseup', () => drawing = false);
+      canvas.addEventListener('mouseup', () => {
+        if(drawing) {
+          drawing = false;
+        }
+      });
       canvas.addEventListener('mouseout', () => drawing = false);
     }
 
-    function setTool(tool) { currentTool = tool; }
+    function setTool(tool) { 
+      currentTool = tool; 
+      document.getElementById('btn-pen').classList.remove('active-tool');
+      document.getElementById('btn-eraser').classList.remove('active-tool');
+      document.getElementById('btn-' + tool).classList.add('active-tool');
+    }
 
     function drawPlayer(x, y, label) {
+      ctx.globalCompositeOperation = 'source-over';
       const isCT = label.startsWith('CT');
       ctx.fillStyle = isCT ? "#00aaff" : "#ff8800";
       ctx.beginPath();
@@ -116,65 +149,74 @@
       ctx.fillStyle = "white";
       ctx.font = "bold 18px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(label.replace('CT','').replace('T',''), x, y + 1);
-      saveHistory();
+      ctx.textBaseline = "middle";
+      ctx.fillText(label.replace('CT','').replace('T',''), x, y);
     }
 
     function placePlayer(label) {
       currentPlayer = label;
-      alert(`Кликни по карте чтобы поставить ${label}`);
     }
 
     function saveHistory() {
+      // Сохраняем состояние только рисунков (без учета фоновой карты в теге img, если бы она была им)
+      // В данном случае сохраняем снимок всего холста
       historys.push(canvas.toDataURL());
-      if (historys.length > 50) historys.shift();
+      if (historys.length > 30) historys.shift();
     }
 
     function loadMap() {
       const url = document.getElementById('mapSelect').value;
-      const img = new Image();
-      img.onload = () => {
-        createCanvas(img.width, img.height);
-        ctx.drawImage(img, 0, 0);
-        historys = [];
-        saveHistory();
+      mapImage = new Image();
+      mapImage.crossOrigin = "anonymous"; // Чтобы canvas не «загрязнялся» и позволял скачивать
+      mapImage.onload = () => {
+        createCanvas(mapImage.width, mapImage.height);
+        ctx.drawImage(mapImage, 0, 0);
+        historys = []; // Сбрасываем историю при смене карты
       };
-      img.onerror = () => alert("Не удалось загрузить карту");
-      img.src = url;
+      mapImage.onerror = () => alert("Не удалось загрузить карту. Возможно, Imgur блокирует запрос.");
+      mapImage.src = url;
     }
 
     function clearCanvas() {
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!ctx) return;
       saveHistory();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(mapImage, 0, 0); // Перерисовываем чистую карту
     }
 
     function undo() {
-      if (historys.length <= 1) {
+      if (historys.length === 0) {
         alert("Нечего отменять");
         return;
       }
-      historys.pop();
+      const previousState = historys.pop();
       const img = new Image();
-      img.src = historys[historys.length - 1];
-      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = previousState;
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(img, 0, 0);
+      };
     }
 
     function addText() {
       if (!ctx) return;
-      const text = prompt("Текст:");
+      const text = prompt("Введите текст:");
       if (!text) return;
-      ctx.font = "bold 34px Arial";
-      ctx.fillStyle = "#ffffff";
-      const x = +prompt("X", 400);
-      const y = +prompt("Y", 300);
-      ctx.fillText(text, x, y);
+      const x = +prompt("Координата X (пример: 200):", 200);
+      const y = +prompt("Координата Y (пример: 200):", 200);
+      
       saveHistory();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.font = "bold 30px Arial";
+      ctx.fillStyle = document.getElementById('color').value;
+      ctx.fillText(text, x, y);
     }
 
     function saveImage() {
       if (!canvas) return;
       const link = document.createElement('a');
-      link.download = 'cs2-strat.png';
+      link.download = 'cs2-tactics.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
