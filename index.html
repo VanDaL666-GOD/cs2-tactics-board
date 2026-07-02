@@ -2,58 +2,78 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Моя CS2 Тактическая Доска</title>
+  <title>CS2 Тактическая Доска - VanDaL</title>
   <style>
-    body { margin: 0; background: #111; color: white; font-family: Arial; }
-    #container { position: relative; display: inline-block; }
-    canvas { border: 2px solid #333; background: #222; }
-    .tools { padding: 10px; background: #222; }
-    button, input { margin: 5px; padding: 8px; }
+    body { margin:0; background:#0f0f0f; color:white; font-family:Arial; text-align:center; }
+    .tools { padding:10px; background:#1f1f1f; }
+    select, button, input { margin:5px; padding:8px 12px; font-size:16px; }
+    #container { position:relative; display:inline-block; box-shadow:0 0 20px rgba(0,255,0,0.3); }
+    canvas { background:#111; border:2px solid #444; }
   </style>
 </head>
 <body>
+  <h1>CS2 Тактическая Доска</h1>
+  
   <div class="tools">
+    <select id="mapSelect">
+      <option value="https://i.imgur.com/0z3nXjE.jpg">Mirage</option>
+      <option value="https://i.imgur.com/8vKzL2P.jpg">Dust2</option>
+      <option value="https://i.imgur.com/5kPqR9m.jpg">Inferno</option>
+      <option value="https://i.imgur.com/JfX9vL2.jpg">Nuke</option>
+      <option value="https://i.imgur.com/7mKpLqR.jpg">Overpass</option>
+    </select>
+    
+    <button onclick="loadMap()">Загрузить карту</button>
     <button onclick="clearCanvas()">Очистить</button>
     <button onclick="undo()">Отменить</button>
+    
     <input type="color" id="color" value="#ff0000">
-    <input type="range" id="size" min="1" max="20" value="5">
-    <button onclick="addText()">Добавить текст</button>
-    <button onclick="saveImage()">Сохранить как картинку</button>
+    <label>Толщина: <input type="range" id="size" min="1" max="30" value="6"></label>
+    
+    <button onclick="addText()">Написать текст</button>
+    <button onclick="saveImage()">Скачать картинку</button>
   </div>
 
   <div id="container">
-    <img id="map" src="" style="position:absolute; z-index:1;">
-    <canvas id="canvas" width="1200" height="800" style="z-index:2;"></canvas>
+    <canvas id="canvas" width="1200" height="800"></canvas>
   </div>
 
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const img = document.getElementById('map');
+    let history = [];
     let drawing = false;
     let lastX, lastY;
-    let history = [];
-
-    // Загрузи сюда свою карту (замени ссылку)
-    img.src = "https://example.com/твоя-карта-mirage.jpg"; // ← замени на реальную ссылку
 
     function saveHistory() {
       history.push(canvas.toDataURL());
-      if (history.length > 20) history.shift();
+      if (history.length > 30) history.shift();
     }
 
-    canvas.addEventListener('mousedown', (e) => {
+    function loadMap() {
+      const url = document.getElementById('mapSelect').value;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        saveHistory();
+      };
+      img.src = url;
+    }
+
+    // Рисование
+    canvas.addEventListener('mousedown', e => {
       drawing = true;
       lastX = e.offsetX;
       lastY = e.offsetY;
       saveHistory();
     });
 
-    canvas.addEventListener('mousemove', (e) => {
+    canvas.addEventListener('mousemove', e => {
       if (!drawing) return;
       ctx.strokeStyle = document.getElementById('color').value;
       ctx.lineWidth = document.getElementById('size').value;
-      ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
@@ -71,29 +91,31 @@
     }
 
     function undo() {
-      if (history.length === 0) return;
-      const last = history.pop();
-      const imgTemp = new Image();
-      imgTemp.src = last;
-      imgTemp.onload = () => ctx.drawImage(imgTemp, 0, 0);
+      if (history.length < 1) return;
+      const img = new Image();
+      img.src = history.pop();
+      img.onload = () => ctx.drawImage(img, 0, 0);
     }
 
     function addText() {
-      const text = prompt("Напиши текст (страту):");
+      const text = prompt("Введите текст стратегии:");
       if (!text) return;
-      ctx.font = "bold 24px Arial";
+      ctx.font = "bold 28px Arial";
       ctx.fillStyle = document.getElementById('color').value;
-      const x = prompt("X координата (пример: 400)", "400");
-      const y = prompt("Y координата (пример: 300)", "300");
-      ctx.fillText(text, parseInt(x), parseInt(y));
+      const x = +prompt("X позиция (пример 400)", "400");
+      const y = +prompt("Y позиция (пример 300)", "300");
+      ctx.fillText(text, x, y);
     }
 
     function saveImage() {
       const link = document.createElement('a');
       link.download = 'cs2-strat.png';
-      link.href = canvas.toDataURL();
+      link.href = canvas.toDataURL('image/png');
       link.click();
     }
+
+    // Загрузка первой карты автоматически
+    window.onload = loadMap;
   </script>
 </body>
 </html>
