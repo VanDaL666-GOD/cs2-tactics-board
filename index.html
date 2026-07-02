@@ -17,7 +17,7 @@
   
   <div class="tools">
     <select id="mapSelect" style="width:340px">
-      <option value="https://i.imgur.com/TIgXFBd.jpg">Mirage</option>
+      <option value="https://i.imgur.com/jD0lSal.jpg">Mirage</option>
       <option value="https://i.imgur.com/pMiAYda.jpg">Dust 2</option>
       <option value="https://i.imgur.com/uKayHnR.jpg">Nuke</option>
       <option value="https://i.imgur.com/0pBWPWD.jpg">Anubis</option>
@@ -25,10 +25,9 @@
       <option value="https://i.imgur.com/ngc0ypx.jpg">Cache</option>
       <option value="https://i.imgur.com/KFv1fqi.jpg">Inferno</option>
     </select>
-    <button onclick="loadMap()">Загрузить карту</button><br>
+    <button onclick="loadMap()">Загрузить карту</button><br><br>
 
-    <!-- Игроки -->
-    <div style="margin:10px 0;">
+    <div>
       <b>CT (синие):</b><br>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT1')">1</button>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT2')">2</button>
@@ -116,7 +115,7 @@
 
     function placePlayer(label) {
       currentPlayer = label;
-      alert(`Кликни на карту, чтобы поставить ${label}`);
+      alert(`Кликни по карте, чтобы поставить ${label}`);
     }
 
     function saveHistory() {
@@ -132,7 +131,7 @@
         ctx.drawImage(img, 0, 0);
         saveHistory();
       };
-      img.onerror = () => alert("Не удалось загрузить карту");
+      img.onerror = () => alert("Не удалось загрузить карту. Попробуй другую.");
       img.src = url;
     }
 
@@ -147,7 +146,7 @@
 
     function addText() {
       if (!ctx) return;
-      const text = prompt("Текст:");
+      const text = prompt("Текст стратегии:");
       if (!text) return;
       ctx.font = "bold 34px Arial";
       ctx.fillStyle = "#ffffff";
