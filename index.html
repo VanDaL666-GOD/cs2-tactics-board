@@ -28,7 +28,7 @@
     <button onclick="loadMap()">Загрузить карту</button><br><br>
 
     <div>
-      <b>CT (синие):</b> 
+      <b>CT:</b> 
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT1')">1</button>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT2')">2</button>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT3')">3</button>
@@ -37,7 +37,7 @@
     </div>
 
     <div style="margin:8px 0;">
-      <b>T (оранжевые):</b> 
+      <b>T:</b> 
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T1')">1</button>
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T2')">2</button>
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T3')">3</button>
@@ -48,7 +48,7 @@
     <div>
       <button onclick="setTool('pen')">✏️ Карандаш</button>
       <button onclick="setTool('eraser')">🧼 Ластик</button>
-      <button onclick="undo()">↩ Отменить</button>
+      <button onclick="undo()">↩ Отменить последнее</button>
       <button onclick="clearCanvas()">🗑 Очистить всё</button>
       <button onclick="addText()">✍ Текст</button>
       <button onclick="saveImage()">💾 Скачать</button>
@@ -86,8 +86,8 @@
 
       canvas.addEventListener('mousemove', e => {
         if (!drawing) return;
-        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : (document.getElementById('color') ? document.getElementById('color').value : "#00ff00");
-        ctx.lineWidth = currentTool === 'eraser' ? 30 : (document.getElementById('size') ? document.getElementById('size').value : 8);
+        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
+        ctx.lineWidth = currentTool === 'eraser' ? 35 : document.getElementById('size').value;
         ctx.lineCap = ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
@@ -100,9 +100,7 @@
       canvas.addEventListener('mouseout', () => drawing = false);
     }
 
-    function setTool(tool) {
-      currentTool = tool;
-    }
+    function setTool(tool) { currentTool = tool; }
 
     function drawPlayer(x, y, label) {
       const isCT = label.startsWith('CT');
@@ -110,25 +108,25 @@
       ctx.beginPath();
       ctx.arc(x, y, 18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "white";
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 3;
       ctx.stroke();
-      ctx.fillStyle = "white";
+      ctx.fillStyle = "#ffffff";
       ctx.font = "bold 18px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(label.replace('CT','').replace('T',''), x, y + 1);
+      ctx.fillText(label.replace('CT','').replace('T',''), x, y);
       saveHistory();
     }
 
     function placePlayer(label) {
       currentPlayer = label;
-      alert(`Кликни по карте, чтобы поставить ${label}`);
+      alert(`Кликни на карту чтобы поставить ${label}`);
     }
 
     function saveHistory() {
-      historys.push(canvas.toDataURL());
-      if (historys.length > 40) historys.shift();
+      if (ctx) historys.push(canvas.toDataURL());
+      if (historys.length > 50) historys.shift();
     }
 
     function loadMap() {
@@ -137,19 +135,33 @@
       img.onload = () => {
         createCanvas(img.width, img.height);
         ctx.drawImage(img, 0, 0);
+        historys = []; // сброс истории при смене карты
         saveHistory();
       };
       img.onerror = () => alert("Не удалось загрузить карту");
       img.src = url;
     }
 
-    function clearCanvas() { if(ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    function clearCanvas() {
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        saveHistory();
+      }
+    }
 
     function undo() {
-      if (historys.length === 0 || !ctx) return;
+      if (historys.length <= 1 || !ctx) {
+        alert("Нечего отменять");
+        return;
+      }
+      historys.pop(); // удаляем текущее состояние
+      const previous = historys[historys.length - 1];
       const img = new Image();
-      img.src = historys.pop();
-      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = previous;
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
     }
 
     function addText() {
