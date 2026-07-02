@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>CS2 Тактическая Доска - VanDaL</title>
+  <title>CS2 Тактическая Доска</title>
   <style>
     body { margin:0; background:#0a0a0a; color:white; font-family:Arial; text-align:center; }
     .tools { padding:15px; background:#1a1a1a; position: sticky; top:0; z-index:10; }
@@ -48,7 +48,7 @@
     <div>
       <button onclick="setTool('pen')">✏️ Карандаш</button>
       <button onclick="setTool('eraser')">🧼 Ластик</button>
-      <button onclick="undo()">↩ Отменить (Ctrl+Z)</button>
+      <button onclick="undo()">↩ Отменить</button>
       <button onclick="clearCanvas()">🗑 Очистить</button>
       <button onclick="addText()">✍ Текст</button>
       <button onclick="saveImage()">💾 Скачать</button>
@@ -66,25 +66,12 @@
     function createCanvas(w, h) {
       container.innerHTML = `<canvas id="canvas" width="${w}" height="${h}"></canvas>`;
       canvas = document.getElementById('canvas');
-      ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx = canvas.getContext('2d');
       setupDrawing();
     }
 
     function setupDrawing() {
       let drawing = false, lastX, lastY;
-
-      const draw = (e) => {
-        if (!drawing) return;
-        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
-        ctx.lineWidth = currentTool === 'eraser' ? 35 : +document.getElementById('size').value;
-        ctx.lineCap = ctx.lineJoin = "round";
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
-        lastX = e.offsetX;
-        lastY = e.offsetY;
-      };
 
       canvas.addEventListener('mousedown', e => {
         if (currentPlayer) {
@@ -98,10 +85,24 @@
         saveHistory();
       });
 
-      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mousemove', e => {
+        if (!drawing) return;
+        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : document.getElementById('color').value;
+        ctx.lineWidth = currentTool === 'eraser' ? 35 : +document.getElementById('size').value;
+        ctx.lineCap = ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+        lastX = e.offsetX;
+        lastY = e.offsetY;
+      });
+
       canvas.addEventListener('mouseup', () => drawing = false);
       canvas.addEventListener('mouseout', () => drawing = false);
     }
+
+    function setTool(tool) { currentTool = tool; }
 
     function drawPlayer(x, y, label) {
       const isCT = label.startsWith('CT');
@@ -121,12 +122,12 @@
 
     function placePlayer(label) {
       currentPlayer = label;
-      alert(`Кликни на карту, чтобы поставить ${label}`);
+      alert(`Кликни по карте чтобы поставить ${label}`);
     }
 
     function saveHistory() {
-      if (ctx) historys.push(canvas.toDataURL());
-      if (historys.length > 60) historys.shift();
+      historys.push(canvas.toDataURL());
+      if (historys.length > 50) historys.shift();
     }
 
     function loadMap() {
@@ -138,30 +139,24 @@
         historys = [];
         saveHistory();
       };
-      img.onerror = () => alert("Ошибка загрузки карты");
+      img.onerror = () => alert("Не удалось загрузить карту");
       img.src = url;
     }
 
     function clearCanvas() {
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        saveHistory();
-      }
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      saveHistory();
     }
 
     function undo() {
-      if (historys.length <= 1 || !ctx) {
+      if (historys.length <= 1) {
         alert("Нечего отменять");
         return;
       }
-      historys.pop(); // удаляем текущее
-      const prev = historys[historys.length-1];
+      historys.pop();
       const img = new Image();
-      img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = prev;
+      img.src = historys[historys.length - 1];
+      img.onload = () => ctx.drawImage(img, 0, 0);
     }
 
     function addText() {
@@ -170,8 +165,8 @@
       if (!text) return;
       ctx.font = "bold 34px Arial";
       ctx.fillStyle = "#ffffff";
-      const x = +prompt("X", Math.floor(canvas.width/2 - 60));
-      const y = +prompt("Y", Math.floor(canvas.height/2));
+      const x = +prompt("X", 400);
+      const y = +prompt("Y", 300);
       ctx.fillText(text, x, y);
       saveHistory();
     }
@@ -182,10 +177,6 @@
       link.download = 'cs2-strat.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
-    }
-
-    function setTool(tool) {
-      currentTool = tool;
     }
 
     window.onload = loadMap;
