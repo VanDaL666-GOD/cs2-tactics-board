@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Моя CS2 Тактическая Доска</title>
+  <style>
+    body { margin: 0; background: #111; color: white; font-family: Arial; }
+    #container { position: relative; display: inline-block; }
+    canvas { border: 2px solid #333; background: #222; }
+    .tools { padding: 10px; background: #222; }
+    button, input { margin: 5px; padding: 8px; }
+  </style>
+</head>
+<body>
+  <div class="tools">
+    <button onclick="clearCanvas()">Очистить</button>
+    <button onclick="undo()">Отменить</button>
+    <input type="color" id="color" value="#ff0000">
+    <input type="range" id="size" min="1" max="20" value="5">
+    <button onclick="addText()">Добавить текст</button>
+    <button onclick="saveImage()">Сохранить как картинку</button>
+  </div>
+
+  <div id="container">
+    <img id="map" src="" style="position:absolute; z-index:1;">
+    <canvas id="canvas" width="1200" height="800" style="z-index:2;"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = document.getElementById('map');
+    let drawing = false;
+    let lastX, lastY;
+    let history = [];
+
+    // Загрузи сюда свою карту (замени ссылку)
+    img.src = "https://example.com/твоя-карта-mirage.jpg"; // ← замени на реальную ссылку
+
+    function saveHistory() {
+      history.push(canvas.toDataURL());
+      if (history.length > 20) history.shift();
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      drawing = true;
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+      saveHistory();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      ctx.strokeStyle = document.getElementById('color').value;
+      ctx.lineWidth = document.getElementById('size').value;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+    });
+
+    canvas.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('mouseout', () => drawing = false);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function undo() {
+      if (history.length === 0) return;
+      const last = history.pop();
+      const imgTemp = new Image();
+      imgTemp.src = last;
+      imgTemp.onload = () => ctx.drawImage(imgTemp, 0, 0);
+    }
+
+    function addText() {
+      const text = prompt("Напиши текст (страту):");
+      if (!text) return;
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = document.getElementById('color').value;
+      const x = prompt("X координата (пример: 400)", "400");
+      const y = prompt("Y координата (пример: 300)", "300");
+      ctx.fillText(text, parseInt(x), parseInt(y));
+    }
+
+    function saveImage() {
+      const link = document.createElement('a');
+      link.download = 'cs2-strat.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  </script>
+</body>
+</html>
