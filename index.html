@@ -28,7 +28,7 @@
     <button onclick="loadMap()">Загрузить карту</button><br><br>
 
     <div>
-      <b>CT (синие):</b><br>
+      <b>CT (синие):</b> 
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT1')">1</button>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT2')">2</button>
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT3')">3</button>
@@ -36,8 +36,8 @@
       <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT5')">5</button>
     </div>
 
-    <div style="margin:10px 0;">
-      <b>T (оранжевые):</b><br>
+    <div style="margin:8px 0;">
+      <b>T (оранжевые):</b> 
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T1')">1</button>
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T2')">2</button>
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T3')">3</button>
@@ -45,10 +45,14 @@
       <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T5')">5</button>
     </div>
 
-    <button onclick="clearCanvas()">🗑 Очистить</button>
-    <button onclick="undo()">↩ Отменить</button>
-    <button onclick="addText()">✍ Текст</button>
-    <button onclick="saveImage()">💾 Скачать</button>
+    <div>
+      <button onclick="setTool('pen')">✏️ Карандаш</button>
+      <button onclick="setTool('eraser')">🧼 Ластик</button>
+      <button onclick="undo()">↩ Отменить</button>
+      <button onclick="clearCanvas()">🗑 Очистить всё</button>
+      <button onclick="addText()">✍ Текст</button>
+      <button onclick="saveImage()">💾 Скачать</button>
+    </div>
   </div>
 
   <div id="container"></div>
@@ -56,6 +60,7 @@
   <script>
     let canvas, ctx, historys = [];
     const container = document.getElementById('container');
+    let currentTool = 'pen';
     let currentPlayer = null;
 
     function createCanvas(w, h) {
@@ -72,17 +77,17 @@
         if (currentPlayer) {
           drawPlayer(e.offsetX, e.offsetY, currentPlayer);
           currentPlayer = null;
-        } else {
-          drawing = true;
-          lastX = e.offsetX; lastY = e.offsetY;
-          saveHistory();
+          return;
         }
+        drawing = true;
+        lastX = e.offsetX; lastY = e.offsetY;
+        saveHistory();
       });
 
       canvas.addEventListener('mousemove', e => {
         if (!drawing) return;
-        ctx.strokeStyle = document.getElementById('color').value || "#00ff00";
-        ctx.lineWidth = document.getElementById('size').value || 8;
+        ctx.strokeStyle = currentTool === 'eraser' ? '#111' : (document.getElementById('color') ? document.getElementById('color').value : "#00ff00");
+        ctx.lineWidth = currentTool === 'eraser' ? 30 : (document.getElementById('size') ? document.getElementById('size').value : 8);
         ctx.lineCap = ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
@@ -95,6 +100,10 @@
       canvas.addEventListener('mouseout', () => drawing = false);
     }
 
+    function setTool(tool) {
+      currentTool = tool;
+    }
+
     function drawPlayer(x, y, label) {
       const isCT = label.startsWith('CT');
       ctx.fillStyle = isCT ? "#00aaff" : "#ff8800";
@@ -104,7 +113,6 @@
       ctx.strokeStyle = "white";
       ctx.lineWidth = 3;
       ctx.stroke();
-      
       ctx.fillStyle = "white";
       ctx.font = "bold 18px Arial";
       ctx.textAlign = "center";
@@ -120,7 +128,7 @@
 
     function saveHistory() {
       historys.push(canvas.toDataURL());
-      if (historys.length > 30) historys.shift();
+      if (historys.length > 40) historys.shift();
     }
 
     function loadMap() {
@@ -153,6 +161,7 @@
       const x = +prompt("X", Math.floor(canvas.width/2 - 60));
       const y = +prompt("Y", Math.floor(canvas.height/2));
       ctx.fillText(text, x, y);
+      saveHistory();
     }
 
     function saveImage() {
