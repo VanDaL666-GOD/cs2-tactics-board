@@ -5,17 +5,18 @@
   <title>CS2 Тактическая Доска - VanDaL</title>
   <style>
     body { margin:0; background:#0a0a0a; color:white; font-family:Arial; text-align:center; }
-    .tools { padding:15px; background:#1a1a1a; }
-    select, button, input { margin:5px; padding:10px 14px; font-size:16px; }
+    .tools { padding:15px; background:#1a1a1a; position: sticky; top:0; z-index:10; }
+    select, button, input { margin:5px; padding:8px 12px; font-size:16px; }
+    .player-btn { width:50px; height:50px; font-size:18px; margin:3px; border-radius:50%; }
     #container { position:relative; display:inline-block; background:#111; padding:10px; border:3px solid #333; }
-    canvas { image-rendering: crisp-edges; }
+    canvas { image-rendering: crisp-edges; max-width:100%; height:auto; cursor: crosshair; }
   </style>
 </head>
 <body>
   <h1>CS2 Тактическая Доска</h1>
   
   <div class="tools">
-    <select id="mapSelect" style="width:320px">
+    <select id="mapSelect" style="width:340px">
       <option value="https://i.imgur.com/TIgXFBd.jpg">Mirage</option>
       <option value="https://i.imgur.com/pMiAYda.jpg">Dust 2</option>
       <option value="https://i.imgur.com/uKayHnR.jpg">Nuke</option>
@@ -24,16 +25,31 @@
       <option value="https://i.imgur.com/ngc0ypx.jpg">Cache</option>
       <option value="https://i.imgur.com/KFv1fqi.jpg">Inferno</option>
     </select>
-    
-    <button onclick="loadMap()">Загрузить карту</button>
-    <button onclick="clearCanvas()">Очистить</button>
-    <button onclick="undo()">Отменить</button>
-    
-    <input type="color" id="color" value="#00ff00">
-    <label>Толщина: <input type="range" id="size" min="1" max="40" value="7"></label>
-    
-    <button onclick="addText()">Написать текст</button>
-    <button onclick="saveImage()">Скачать</button>
+    <button onclick="loadMap()">Загрузить карту</button><br>
+
+    <!-- Игроки -->
+    <div style="margin:10px 0;">
+      <b>CT (синие):</b><br>
+      <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT1')">1</button>
+      <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT2')">2</button>
+      <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT3')">3</button>
+      <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT4')">4</button>
+      <button class="player-btn" style="background:#00aaff;color:white;" onclick="placePlayer('CT5')">5</button>
+    </div>
+
+    <div style="margin:10px 0;">
+      <b>T (оранжевые):</b><br>
+      <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T1')">1</button>
+      <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T2')">2</button>
+      <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T3')">3</button>
+      <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T4')">4</button>
+      <button class="player-btn" style="background:#ff8800;color:white;" onclick="placePlayer('T5')">5</button>
+    </div>
+
+    <button onclick="clearCanvas()">🗑 Очистить</button>
+    <button onclick="undo()">↩ Отменить</button>
+    <button onclick="addText()">✍ Текст</button>
+    <button onclick="saveImage()">💾 Скачать</button>
   </div>
 
   <div id="container"></div>
@@ -41,6 +57,7 @@
   <script>
     let canvas, ctx, historys = [];
     const container = document.getElementById('container');
+    let currentPlayer = null;
 
     function createCanvas(w, h) {
       container.innerHTML = `<canvas id="canvas" width="${w}" height="${h}"></canvas>`;
@@ -53,15 +70,20 @@
       let drawing = false, lastX, lastY;
 
       canvas.addEventListener('mousedown', e => {
-        drawing = true;
-        lastX = e.offsetX; lastY = e.offsetY;
-        saveHistory();
+        if (currentPlayer) {
+          drawPlayer(e.offsetX, e.offsetY, currentPlayer);
+          currentPlayer = null;
+        } else {
+          drawing = true;
+          lastX = e.offsetX; lastY = e.offsetY;
+          saveHistory();
+        }
       });
 
       canvas.addEventListener('mousemove', e => {
         if (!drawing) return;
-        ctx.strokeStyle = document.getElementById('color').value;
-        ctx.lineWidth = document.getElementById('size').value;
+        ctx.strokeStyle = document.getElementById('color').value || "#00ff00";
+        ctx.lineWidth = document.getElementById('size').value || 8;
         ctx.lineCap = ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
@@ -74,9 +96,32 @@
       canvas.addEventListener('mouseout', () => drawing = false);
     }
 
+    function drawPlayer(x, y, label) {
+      const isCT = label.startsWith('CT');
+      ctx.fillStyle = isCT ? "#00aaff" : "#ff8800";
+      ctx.beginPath();
+      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      ctx.fillStyle = "white";
+      ctx.font = "bold 18px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label.replace('CT','').replace('T',''), x, y + 1);
+      saveHistory();
+    }
+
+    function placePlayer(label) {
+      currentPlayer = label;
+      alert(`Кликни на карту, чтобы поставить ${label}`);
+    }
+
     function saveHistory() {
       historys.push(canvas.toDataURL());
-      if (historys.length > 25) historys.shift();
+      if (historys.length > 30) historys.shift();
     }
 
     function loadMap() {
@@ -102,11 +147,11 @@
 
     function addText() {
       if (!ctx) return;
-      const text = prompt("Текст стратегии:");
+      const text = prompt("Текст:");
       if (!text) return;
-      ctx.font = "bold 32px Arial";
-      ctx.fillStyle = document.getElementById('color').value;
-      const x = +prompt("X", Math.floor(canvas.width/2 - 50));
+      ctx.font = "bold 34px Arial";
+      ctx.fillStyle = "#ffffff";
+      const x = +prompt("X", Math.floor(canvas.width/2 - 60));
       const y = +prompt("Y", Math.floor(canvas.height/2));
       ctx.fillText(text, x, y);
     }
