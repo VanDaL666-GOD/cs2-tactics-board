@@ -5,35 +5,35 @@
   <title>CS2 Тактическая Доска - VanDaL</title>
   <style>
     body { margin:0; background:#0f0f0f; color:white; font-family:Arial; text-align:center; }
-    .tools { padding:10px; background:#1f1f1f; }
-    select, button, input { margin:5px; padding:8px 12px; font-size:16px; }
-    #container { position:relative; display:inline-block; box-shadow:0 0 20px rgba(0,255,0,0.3); }
-    canvas { background:#111; border:2px solid #444; }
+    .tools { padding:15px; background:#1f1f1f; }
+    select, button, input { margin:5px; padding:10px 14px; font-size:16px; }
+    #container { position:relative; display:inline-block; box-shadow:0 0 25px rgba(0,255,0,0.4); }
+    canvas { background:#111; border:3px solid #555; }
   </style>
 </head>
 <body>
   <h1>CS2 Тактическая Доска</h1>
   
   <div class="tools">
-    <select id="mapSelect">
+    <select id="mapSelect" style="width:280px">
       <option value="https://i.imgur.com/OFXR7lw.jpg">Ancient</option>
       <option value="https://i.imgur.com/qDml1f0.jpg">Anubis</option>
       <option value="https://i.imgur.com/xewKev7.jpg">Cache</option>
       <option value="https://i.imgur.com/dNuxh6j.jpg">Dust 2</option>
       <option value="https://i.imgur.com/TIgXFBd.jpg">Inferno</option>
       <option value="https://i.imgur.com/mugcxH0.jpg">Nuke</option>
-      <option value="https://i.imgur.com/undefined.jpg">Mirage</option>
+      <option value="https://i.imgur.com/undefined.jpg">Mirage (если не грузит - скажи)</option>
     </select>
     
-    <button onclick="loadMap()">Загрузить карту</button>
-    <button onclick="clearCanvas()">Очистить</button>
-    <button onclick="undo()">Отменить</button>
+    <button onclick="loadMap()">✅ Загрузить карту</button>
+    <button onclick="clearCanvas()">🗑 Очистить</button>
+    <button onclick="undo()">↩ Отменить</button>
     
-    <input type="color" id="color" value="#ff0000">
-    <label>Толщина: <input type="range" id="size" min="1" max="30" value="6"></label>
+    <input type="color" id="color" value="#00ff00">
+    <label>Толщина: <input type="range" id="size" min="1" max="40" value="8"></label>
     
-    <button onclick="addText()">Написать текст</button>
-    <button onclick="saveImage()">Скачать страту</button>
+    <button onclick="addText()">✍ Написать текст</button>
+    <button onclick="saveImage()">💾 Скачать</button>
   </div>
 
   <div id="container">
@@ -44,30 +44,37 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let history = [];
-    let drawing = false;
-    let lastX, lastY;
 
-    function saveHistory() { 
-      history.push(canvas.toDataURL()); 
-      if (history.length > 30) history.shift(); 
+    function saveHistory() {
+      history.push(canvas.toDataURL());
+      if (history.length > 25) history.shift();
     }
 
     function loadMap() {
       const url = document.getElementById('mapSelect').value;
       const img = new Image();
+      
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         saveHistory();
+        console.log("Карта загружена:", url);
       };
+      
+      img.onerror = () => alert("Не удалось загрузить карту. Попробуй другую.");
+      
       img.src = url;
     }
 
-    canvas.addEventListener('mousedown', e => { 
-      drawing = true; 
-      lastX = e.offsetX; 
-      lastY = e.offsetY; 
-      saveHistory(); 
+    // Рисование
+    let drawing = false;
+    let lastX, lastY;
+
+    canvas.addEventListener('mousedown', e => {
+      drawing = true;
+      lastX = e.offsetX;
+      lastY = e.offsetY;
+      saveHistory();
     });
 
     canvas.addEventListener('mousemove', e => {
@@ -75,11 +82,12 @@
       ctx.strokeStyle = document.getElementById('color').value;
       ctx.lineWidth = document.getElementById('size').value;
       ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
       ctx.lineTo(e.offsetX, e.offsetY);
       ctx.stroke();
-      lastX = e.offsetX; 
+      lastX = e.offsetX;
       lastY = e.offsetY;
     });
 
@@ -89,19 +97,19 @@
     function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
     function undo() {
-      if (history.length < 1) return;
+      if (history.length === 0) return;
       const img = new Image();
       img.src = history.pop();
       img.onload = () => ctx.drawImage(img, 0, 0);
     }
 
     function addText() {
-      const text = prompt("Текст стратегии:");
+      const text = prompt("Напиши текст:");
       if (!text) return;
-      ctx.font = "bold 28px Arial";
+      ctx.font = "bold 30px Arial";
       ctx.fillStyle = document.getElementById('color').value;
-      const x = +prompt("X позиция (пример 400)", "400");
-      const y = +prompt("Y позиция (пример 300)", "300");
+      const x = +prompt("X (400)", "400");
+      const y = +prompt("Y (300)", "300");
       ctx.fillText(text, x, y);
     }
 
@@ -112,6 +120,7 @@
       link.click();
     }
 
+    // Автозагрузка первой карты
     window.onload = loadMap;
   </script>
 </body>
